@@ -23,15 +23,15 @@ var (
 	dbhost = flag.String("host", "localhost", "host name")
 	// port number of the host
 	port = flag.String("port", "5432", "port number")
-	// database user
+	// argument to enter the database user
 	user = flag.String("user", "fossy", "user name")
 	// name of database to be connected
 	dbname = flag.String("dbname", "fossology", "database name")
-	// password of the user
+	// password of the database
 	password = flag.String("password", "fossy", "password")
 	// path of data file
 	datafile = flag.String("datafile", "licenseRef.json", "datafile path")
-	// boolean agument to whether update the database or not
+	// auto-update the database
 	populatedb = flag.Bool("populatedb", false, "boolean variable to update database")
 )
 
@@ -65,9 +65,10 @@ func main() {
 	api.DB = database
 
 	r := gin.Default()
-
+	r.NoRoute(api.HandleInvalidUrl)
 	r.GET("/api/licenses", api.GetAllLicense)
 	r.GET("/api/license/:shortname", api.GetLicense)
-
+	r.POST("/api/license", api.CreateLicense)
+	r.PATCH("/api/license/update/:shortname", api.UpdateLicense)
 	r.Run()
 }

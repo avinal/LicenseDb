@@ -115,7 +115,7 @@ func UpdateLicense(c *gin.Context) {
 	var update models.License
 	var license models.License
 	shortname := c.Param("shortname")
-	if err := DB.First(&license, shortname).Error; err != nil {
+	if err := DB.Where("shortname = ?", shortname).First(&license).Error; err != nil {
 		er := models.LicenseError{
 			Status:    http.StatusBadRequest,
 			Message:   fmt.Sprintf("license not found"),
@@ -156,6 +156,44 @@ func UpdateLicense(c *gin.Context) {
 		},
 	}
 
+	c.JSON(http.StatusOK, res)
+
+}
+
+func SearchInLicense(c *gin.Context) {
+	feild := c.Query("feild")
+	search_term := c.Query("search_term")
+	search := c.Query("search")
+	if feild == "" && search_term == "" {
+		GetAllLicense(c)
+		return
+	}
+	var query *gorm.DB
+	var license []models.License
+	if search == "fuzzy" {
+		query = DB.Where(fmt.Sprintf("%s ILIKE ?", feild), fmt.Sprintf("%%%s%%", search_term)).Find(&license)
+	} else {
+		query = DB.Where(feild+" @@ plainto_tsquery(?)", search_term).Find(&license)
+	}
+
+	if err := query.Error; err != nil {
+		er := models.LicenseError{
+			Status:    http.StatusBadRequest,
+			Message:   fmt.Sprintf("incorrect query to search in the database"),
+			Error:     err.Error(),
+			Path:      c.Request.URL.Path,
+			Timestamp: time.Now().Format(time.RFC3339),
+		}
+		c.JSON(http.StatusBadRequest, er)
+		return
+	}
+	res := models.LicenseResponse{
+		Data:   license,
+		Status: http.StatusOK,
+		Meta: models.Meta{
+			ResourceCount: len(license),
+		},
+	}
 	c.JSON(http.StatusOK, res)
 
 }

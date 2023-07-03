@@ -12,6 +12,7 @@ import (
 
 	"github.com/fossology/LicenseDb/pkg/api"
 	"github.com/fossology/LicenseDb/pkg/authenticate"
+	"github.com/fossology/LicenseDb/pkg/db"
 	"github.com/fossology/LicenseDb/pkg/models"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
@@ -66,7 +67,7 @@ func main() {
 			database.Create(&license)
 		}
 	}
-	api.DB = database
+	db.DB = database
 
 	r := gin.Default()
 	r.NoRoute(api.HandleInvalidUrl)

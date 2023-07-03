@@ -8,12 +8,27 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fossology/LicenseDb/pkg/authenticate"
+	"github.com/fossology/LicenseDb/pkg/db"
 	"github.com/fossology/LicenseDb/pkg/models"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
+func Router() *gin.Engine {
+	r := gin.Default()
+	r.NoRoute(HandleInvalidUrl)
+	authorized := r.Group("/")
+	authorized.Use(authenticate.AuthenticationMiddleware())
+	authorized.GET("/api/license/:shortname", GetLicense)
+	authorized.POST("/api/license", CreateLicense)
+	authorized.PATCH("/api/license/update/:shortname", UpdateLicense)
+	authorized.GET("/api/licenses", SearchInLicense)
+	r.POST("/api/user", authenticate.CreateUser)
+	authorized.GET("/api/users", authenticate.GetAllUser)
+	authorized.GET("/api/user/:id", authenticate.GetUser)
+	return r
+}
 
 func HandleInvalidUrl(c *gin.Context) {
 
@@ -29,7 +44,7 @@ func HandleInvalidUrl(c *gin.Context) {
 func GetAllLicense(c *gin.Context) {
 	var licenses []models.License
 
-	err := DB.Find(&licenses).Error
+	err := db.DB.Find(&licenses).Error
 	if err != nil {
 		er := models.LicenseError{
 			Status:    http.StatusBadRequest,
@@ -60,7 +75,7 @@ func GetLicense(c *gin.Context) {
 		return
 	}
 
-	err := DB.Where("shortname = ?", queryParam).First(&license).Error
+	err := db.DB.Where("shortname = ?", queryParam).First(&license).Error
 
 	if err != nil {
 		er := models.LicenseError{
@@ -106,7 +121,7 @@ func CreateLicense(c *gin.Context) {
 
 	license := models.License(input)
 
-	DB.Create(&license)
+	db.DB.Create(&license)
 
 	c.JSON(http.StatusOK, gin.H{"data": license})
 }
@@ -115,7 +130,7 @@ func UpdateLicense(c *gin.Context) {
 	var update models.License
 	var license models.License
 	shortname := c.Param("shortname")
-	if err := DB.Where("shortname = ?", shortname).First(&license).Error; err != nil {
+	if err := db.DB.Where("shortname = ?", shortname).First(&license).Error; err != nil {
 		er := models.LicenseError{
 			Status:    http.StatusBadRequest,
 			Message:   fmt.Sprintf("license not found"),
@@ -137,7 +152,7 @@ func UpdateLicense(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, er)
 		return
 	}
-	if err := DB.Model(&license).Updates(update).Error; err != nil {
+	if err := db.DB.Model(&license).Updates(update).Error; err != nil {
 		er := models.LicenseError{
 			Status:    http.StatusBadRequest,
 			Message:   fmt.Sprintf("Failed to update license"),
@@ -171,9 +186,9 @@ func SearchInLicense(c *gin.Context) {
 	var query *gorm.DB
 	var license []models.License
 	if search == "fuzzy" {
-		query = DB.Where(fmt.Sprintf("%s ILIKE ?", feild), fmt.Sprintf("%%%s%%", search_term)).Find(&license)
+		query = db.DB.Where(fmt.Sprintf("%s ILIKE ?", feild), fmt.Sprintf("%%%s%%", search_term)).Find(&license)
 	} else {
-		query = DB.Where(feild+" @@ plainto_tsquery(?)", search_term).Find(&license)
+		query = db.DB.Where(feild+" @@ plainto_tsquery(?)", search_term).Find(&license)
 	}
 
 	if err := query.Error; err != nil {

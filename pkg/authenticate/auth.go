@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fossology/LicenseDb/pkg/api"
+	"github.com/fossology/LicenseDb/pkg/db"
 	"github.com/fossology/LicenseDb/pkg/models"
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +30,7 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	result := api.DB.Create(&user)
+	result := db.DB.Create(&user)
 	if result.Error != nil {
 		er := models.LicenseError{
 			Status:    http.StatusInternalServerError,
@@ -55,7 +55,7 @@ func CreateUser(c *gin.Context) {
 
 func GetAllUser(c *gin.Context) {
 	var users []models.User
-	err := api.DB.Find(&users).Error
+	err := db.DB.Find(&users).Error
 	if err != nil {
 		er := models.LicenseError{
 			Status:    http.StatusBadRequest,
@@ -80,7 +80,7 @@ func GetAllUser(c *gin.Context) {
 func GetUser(c *gin.Context) {
 	var user models.User
 	id := c.Param("id")
-	err := api.DB.Where("id = ?", id).First(&user).Error
+	err := db.DB.Where("id = ?", id).First(&user).Error
 	if err != nil {
 		er := models.LicenseError{
 			Status:    http.StatusBadRequest,
@@ -136,7 +136,7 @@ func AuthenticationMiddleware() gin.HandlerFunc {
 		password := auth[1]
 
 		var user models.User
-		result := api.DB.Where("username = ?", username).First(&user)
+		result := db.DB.Where("username = ?", username).First(&user)
 		if result.Error != nil {
 			er := models.LicenseError{
 				Status:    http.StatusUnauthorized,
